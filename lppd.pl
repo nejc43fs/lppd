@@ -79,7 +79,7 @@ sub parse_recipient
 	$rv = "dunno";
 
 	syslog("err", "Starting LDAP:" ) if $debug;
-	my $ldap = Net::LDAP->new( $ldap_server, timeout => 15 ) or return "dunno";
+	my $ldap = Net::LDAP->new( $ldap_server, timeout => $tcp_timeout ) or return "dunno";
 	$ldap->bind($ldap_dn, password => $ldap_pass);
 	syslog("err", "LDAP: bind success" ) if $debug;
 
