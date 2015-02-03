@@ -90,46 +90,45 @@ sub parse_recipient
 	my ($rv, $entry, $username, $db, $query, $updated, $logEntry, $max_checks);
 	$rv = 2;
 
-	eval {
-		syslog("err", "Starting LDAP:" );
-		my $ldap = Net::LDAP->new( $ldap_server, timeout => 15 ) or return 2;
-		$ldap->bind($ldap_dn, password => $ldap_pass);
-		syslog("err", "LDAP: bind success" );
- 
-		my $filter = $ldap_filter;
-		$filter =~ s/%s/$recipient/g;
+	syslog("err", "Starting LDAP:" );
+	my $ldap = Net::LDAP->new( $ldap_server, timeout => 15 ) or return 2;
+	$ldap->bind($ldap_dn, password => $ldap_pass);
+	syslog("err", "LDAP: bind success" );
 
-		my $result = $ldap->search(
-		    base   => $ldap_base,
-		    filter => Net::LDAP::Filter->new( $filter ),
-		    attrs => ['uid', 'mailHost']
-		);
-		syslog("err", "LDAP: searching base: " .$ldap_base ." filter: " .$filter );
- 
-		if (!$result->code) {
-			if($result->count == 0) {
-				$rv=2;
-				log_request($recipient,$rv,0);
-				syslog("err", "Request for $recipient [unknown mail alias]"); 
-			} elsif($result->count == 1) {
-				$mailboxHost = $result->get_value("mailHost") || "";
-				$username = $result->get_value("uid") || "";
-				syslog("err", "Response received: mailhost: " .$mailboxHost ." username: " .$username );
-				syslog("err", "Calling check_quota");
-				$rv = check_quota($username, $mailboxHost, $size) || "2";
-				syslog("err", "Return from check_quota: " . $rv);
-				log_request($recipient,$rv,0);
-			} else {
-				syslog("err", "Too many responses");
-				$rv = 2;
-			}
+	my $filter = $ldap_filter;
+	$filter =~ s/%s/$recipient/g;
+
+	my $result = $ldap->search(
+		base   => $ldap_base,
+		filter => Net::LDAP::Filter->new( $filter ),
+		attrs => ['uid', 'mailHost']
+	);
+	syslog("err", "LDAP: searching base: " .$ldap_base ." filter: " .$filter );
+
+	if (!$result->code) {
+		syslog("err", "result code is" .$result->code );
+		if ($result->count == 0) {
+			$rv=2;
+			log_request($recipient,$rv,0);
+			syslog("err", "Request for $recipient [unknown mail alias]"); 
+		} elsif($result->count == 1) {
+			$mailboxHost = $result->get_value("mailHost") || "";
+			$username = $result->get_value("uid") || "";
+			syslog("err", "Response received: mailhost: " .$mailboxHost ." username: " .$username );
+			syslog("err", "Calling check_quota");
+			$rv = check_quota($username, $mailboxHost, $size) || "2";
+			syslog("err", "Return from check_quota: " . $rv);
+			log_request($recipient,$rv,0);
 		} else {
-			syslog("err", "LDAP query failed: " . $result->error );
+			syslog("err", "Too many responses");
+			$rv = 2;
 		}
-		syslog("err", "Unbinding LDAP");
-		$ldap->unbind;
-		alarm 0;
-	};
+	} else {
+		syslog("err", "LDAP query failed: " . $result->error );
+	}
+	syslog("err", "Unbinding LDAP");
+	$ldap->unbind;
+	alarm 0;
 	syslog("err", "returning from parse_recipient: " .$rv);
 	return $rv;
 }
@@ -160,7 +159,7 @@ sub check_quota
 		{
 			last if($line =~ m/^$/);
 			$action = $1 if($line =~ m/^action=(.*)/);
-		#	$socket->close;
+			#	$socket->close;
 		}
 		$socket->close;
 		alarm 0;
@@ -185,7 +184,7 @@ sub parse_config
 	$ldap_dn = $config{ldap_dn} if $config{ldap_dn};
 	$ldap_pass = $config{ldap_pass} if $config{ldap_pass};
 	$ldap_filter = $config{ldap_filter} if $config{ldap_filter};
-	
+
 	unless($bind_port =~ /^[1-9]+?\d*?$/ && $bind_port > 0 && $bind_port < 65536) {
 		print "bind_port must be an integer in the range of 1-65535\n"; exit;
 	}
