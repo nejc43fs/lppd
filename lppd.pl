@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w
-$|++;
 
 # Postfix Policy Daemon:
 # Sprejema requeste od postfixov in sprašuje mailboxHoste o stanju quote 
@@ -80,11 +79,12 @@ sub parse_recipient
 	$rv = "dunno";
 
 	syslog("err", "Starting LDAP:" ) if $debug;
-	my $ldap = Net::LDAP->new( $ldap_server, timeout => 15 ) or return 2;
+	my $ldap = Net::LDAP->new( $ldap_server, timeout => 15 ) or return "dunno";
 	$ldap->bind($ldap_dn, password => $ldap_pass);
 	syslog("err", "LDAP: bind success" ) if $debug;
 
 	my $filter = $ldap_filter;
+	$filter =~ s/\r//gc;
 	$filter =~ s/%s/$recipient/g;
 
 	my $result = $ldap->search(
