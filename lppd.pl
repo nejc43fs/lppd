@@ -68,16 +68,17 @@ sub log_request
 	my $recipient = shift;
 	my $status = shift;
 	my $cached = shift;
-	my $flags;
-	my $logEntry = "Request for $recipient";
-	if($cached == 1) { $flags .= 'cached'; }
-	elsif($cached == 2) { $flags .= ($flags ? ', ' : '') . 'updated'; }
-	elsif($cached == 3) { $flags .= ($flags ? ', ' : '') . 'updated, max-checks'; }
-	if($status == 0) { $flags .= ($flags ? ', ' : '') . 'over quota'; }
-	if($status == 1) { $flags .= ($flags ? ', ' : '') . 'quota ok'; }
-	if($status == 2) { $flags .= ($flags ? ', ' : '') . 'no quota/unknown user'; }
-	if(!$flags) { syslog("err", $logEntry); }
-	else { syslog("err", $logEntry . " [" . $flags . "]"); }
+#	my $flags;
+#	my $logEntry = "Request for $recipient";
+#	if($cached == 1) { $flags .= 'cached'; }
+#	elsif($cached == 2) { $flags .= ($flags ? ', ' : '') . 'updated'; }
+#	elsif($cached == 3) { $flags .= ($flags ? ', ' : '') . 'updated, max-checks'; }
+#	if($status == 0) { $flags .= ($flags ? ', ' : '') . 'over quota'; }
+#	if($status == 1) { $flags .= ($flags ? ', ' : '') . 'quota ok'; }
+#	if($status == 2) { $flags .= ($flags ? ', ' : '') . 'no quota/unknown user'; }
+#	if(!$flags) { syslog("err", $logEntry); }
+#	else { syslog("err", $logEntry . " [" . $flags . "]"); }
+	syslog("err", "log_request: Response: $recipient : $status");	
 }
 
 # parse_recipient(alias): checks whether the user corresponding to $alias is over quota (uses timestamp cache)
@@ -88,7 +89,7 @@ sub parse_recipient
 	my $recipient = shift;
 	my $size = shift;
 	my ($rv, $entry, $username, $db, $query, $updated, $logEntry, $max_checks);
-	$rv = 2;
+	$rv = "dunno";
 
 	syslog("err", "Starting LDAP:" );
 	my $ldap = Net::LDAP->new( $ldap_server, timeout => 15 ) or return 2;
@@ -108,7 +109,7 @@ sub parse_recipient
 	if (!$result->code) {
 		syslog("err", "result code is" .$result->code );
 		if ($result->count == 0) {
-			$rv=2;
+			$rv="dunno";
 			log_request($recipient,$rv,0);
 			syslog("err", "Request for $recipient [unknown mail alias]"); 
 		} elsif($result->count == 1) {
@@ -117,13 +118,13 @@ sub parse_recipient
 				$username = $entry->get_value("uid") || "";
 				syslog("err", "Response received: mailhost: " .$mailboxHost ." username: " .$username );
 				syslog("err", "Calling check_quota");
-				$rv = check_quota($username, $mailboxHost, $size) || "2";
+				$rv = check_quota($username, $mailboxHost, $size) || "dunno";
 				syslog("err", "Return from check_quota: " . $rv);
 				log_request($recipient,$rv,0);
 			}
 		} else {
 			syslog("err", "Too many responses");
-			$rv = 2;
+			$rv = "dunno";
 		}
 	} else {
 		syslog("err", "LDAP query failed: " . $result->error );
@@ -146,6 +147,7 @@ sub check_quota
 	my $mailsize = shift;
 	local $SIG{ALRM} = sub { syslog("err", "check_quota has timed out (". $dovecot_policy_timeout ."s)"); die; };
 	alarm $dovecot_policy_timeout;
+	my $action = "dunno";
 	eval {
 		my $socket = IO::Socket::INET->new(
 			PeerAddr => $mboxHost,
@@ -172,9 +174,10 @@ sub check_quota
 		return 2; 
 		syslog("err", "Error in eval for : " . $username ."\@" .$mboxHost ); 
 	}
-	return 1 if($action eq "ok");
-	return 2 if($action eq "dunno");
-	return 0;
+	return $action;
+#	return 1 if($action eq "ok");
+#	return 2 if($action eq "dunno");
+#	return 0;
 }
 
 # parse_config
@@ -239,11 +242,12 @@ sub process_request {
 		syslog("err", "Request: recipient=" . $query{recipient} ." size=" .$query{size});
 		my $rv = parse_recipient($query{recipient}, $query{size});
 		syslog("err", "Return value from parse_recipient: " . $rv );
-		if($rv < 2) {
-			print $rv ? $RESPONSE_OK : $RESPONSE_REJECT; return;
-		} else {
-			print $RESPONSE_DUNNO; return;
-		}
+		#if($rv < 2) {
+		#	print $rv ? $RESPONSE_OK : $RESPONSE_REJECT; return;
+		#} else {
+		#	print $RESPONSE_DUNNO; return;
+		#}
+		print $rv;
 	}
 	print $RESPONSE_DUNNO;
 	return;
