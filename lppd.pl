@@ -203,9 +203,11 @@ sub process_request {
 					syslog("err", "Invalid request - no recipient"); die;
 				}
 				last;
-			} else {
+			} elseif ( $line =~ /\w=.*/ ) {
 				my ( $field, $value ) = split( /=/, lc $line, 2 );
 				$query{$field} = $value if (length($field) > 0 && length($value) > 0 );
+			} else {
+				last;
 			}
 		}
 		alarm 0;
