@@ -113,7 +113,6 @@ sub parse_recipient
 			syslog("err", "Request for $recipient [unknown mail alias]"); 
 		} elsif($result->count == 1) {
 			foreach my $entry ($result->entries) {
-				$entry = $$result->entries[0];
 				$mailboxHost = $entry->get_value("mailHost") || "";
 				$username = $entry->get_value("uid") || "";
 				syslog("err", "Response received: mailhost: " .$mailboxHost ." username: " .$username );
