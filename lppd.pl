@@ -31,12 +31,10 @@ my $pid_file = "/tmp/ppd.pid";
 my (%query, $quota_request, $rt, $line, $field, $value, $return_value, %config, $mailboxHost);
 my $ldap_filter= '(|(uid=%s)(mailAlternateAddress=%s)(mail=%s))'; # %s expands to recipient
 my $RESPONSE_DUNNO = "action=dunno\n\n";
-my $RESPONSE_OK = "action=dunno\n\n";
-#my $RESPONSE_REJECT = "action=reject\n\n";
-#my $RESPONSE_REJECT = "action=dunno\n\n";
-my $RESPONSE_REJECT = "action=defer_if_permit User over quota\n\n";
 my $logfile = "/tmp/lppd.log";
 my $daemonize = 0; # 0 - if foreground, 1 - background
+
+my $debug = 1;
 
 #################  :: main ::  ###################
 
@@ -68,16 +66,6 @@ sub log_request
 	my $recipient = shift;
 	my $status = shift;
 	my $cached = shift;
-#	my $flags;
-#	my $logEntry = "Request for $recipient";
-#	if($cached == 1) { $flags .= 'cached'; }
-#	elsif($cached == 2) { $flags .= ($flags ? ', ' : '') . 'updated'; }
-#	elsif($cached == 3) { $flags .= ($flags ? ', ' : '') . 'updated, max-checks'; }
-#	if($status == 0) { $flags .= ($flags ? ', ' : '') . 'over quota'; }
-#	if($status == 1) { $flags .= ($flags ? ', ' : '') . 'quota ok'; }
-#	if($status == 2) { $flags .= ($flags ? ', ' : '') . 'no quota/unknown user'; }
-#	if(!$flags) { syslog("err", $logEntry); }
-#	else { syslog("err", $logEntry . " [" . $flags . "]"); }
 	syslog("err", "log_request: Response: $recipient : $status");	
 }
 
@@ -91,10 +79,10 @@ sub parse_recipient
 	my ($rv, $entry, $username, $db, $query, $updated, $logEntry, $max_checks);
 	$rv = "dunno";
 
-	syslog("err", "Starting LDAP:" );
+	syslog("err", "Starting LDAP:" ) if $debug;
 	my $ldap = Net::LDAP->new( $ldap_server, timeout => 15 ) or return 2;
 	$ldap->bind($ldap_dn, password => $ldap_pass);
-	syslog("err", "LDAP: bind success" );
+	syslog("err", "LDAP: bind success" ) if $debug;
 
 	my $filter = $ldap_filter;
 	$filter =~ s/%s/$recipient/g;
@@ -104,35 +92,34 @@ sub parse_recipient
 		filter => Net::LDAP::Filter->new( $filter ),
 		attrs => ['uid', 'mailHost']
 	);
-	syslog("err", "LDAP: searching base: " .$ldap_base ." filter: " .$filter );
+	syslog("err", "LDAP: searching base: " .$ldap_base ." filter: " .$filter ) if $debug;
 
 	if (!$result->code) {
-		syslog("err", "result code is" .$result->code );
+		syslog("err", "result code is" .$result->code ) if $debug;
 		if ($result->count == 0) {
 			$rv="dunno";
 			log_request($recipient,$rv,0);
-			syslog("err", "Request for $recipient [unknown mail alias]"); 
+			syslog("err", "Request for $recipient [unknown mail alias]") if $debug; 
 		} elsif($result->count == 1) {
 			foreach my $entry ($result->entries) {
 				$mailboxHost = $entry->get_value("mailHost") || "";
 				$username = $entry->get_value("uid") || "";
-				syslog("err", "Response received: mailhost: " .$mailboxHost ." username: " .$username );
-				syslog("err", "Calling check_quota");
+				syslog("err", "Response received: mailhost: " .$mailboxHost ." username: " .$username ) if $debug;
 				$rv = check_quota($username, $mailboxHost, $size) || "dunno";
-				syslog("err", "Return from check_quota: " . $rv);
+				syslog("err", "Return from check_quota: " . $rv) if $debug;
 				log_request($recipient,$rv,0);
 			}
 		} else {
-			syslog("err", "Too many responses");
+			syslog("err", "Too many responses") if $debug;
 			$rv = "dunno";
 		}
 	} else {
-		syslog("err", "LDAP query failed: " . $result->error );
+		syslog("err", "LDAP query failed: " . $result->error ) if $debug;
 	}
-	syslog("err", "Unbinding LDAP");
+	syslog("err", "Unbinding LDAP") if $debug;
 	$ldap->unbind;
 	alarm 0;
-	syslog("err", "returning from parse_recipient: " .$rv);
+	syslog("err", "returning from parse_recipient: " .$rv) if $debug;
 	return $rv;
 }
 
@@ -153,30 +140,26 @@ sub check_quota
 			Proto => "tcp",
 			PeerPort => $dovecot_policy_port);
 		if(!defined $socket) {
-			syslog("err", "Cannot connect to socket (" . $mboxHost . ":" . $dovecot_policy_port. ")");
+			syslog("err", "Cannot connect to socket (" . $mboxHost . ":" . $dovecot_policy_port. ")") if $debug;
 			die;
 		}
 		my $data = "recipient=" . $username . "\n" ."size=" .$mailsize ."\n\n";
-		syslog("err", "Sending to " .$mboxHost ." port: " .$dovecot_policy_port ." request: " .$data);
+		syslog("err", "Sending to " .$mboxHost ." port: " .$dovecot_policy_port ." request: " .$data) if $debug;
 		$socket->printflush($data);
 		while($line = $socket->getline)
 		{
 			last if($line =~ m/^$/);
 			$action = $1 if($line =~ m/^action=(.*)/);
-			#	$socket->close;
 		}
-		syslog("err", "Got response: " .$action);
+		syslog("err", "Got response: " .$action) if $debug;
 		$socket->close;
 		alarm 0;
 	}; 
 	if($@) { 
-		return 2; 
-		syslog("err", "Error in eval for : " . $username ."\@" .$mboxHost ); 
+		return "dunno"; 
+		syslog("err", "Error in eval for : " . $username ."\@" .$mboxHost ) if $debug; 
 	}
 	return $action;
-#	return 1 if($action eq "ok");
-#	return 2 if($action eq "dunno");
-#	return 0;
 }
 
 # parse_config
@@ -241,11 +224,6 @@ sub process_request {
 		syslog("err", "Request: recipient=" . $query{recipient} ." size=" .$query{size});
 		my $rv = parse_recipient($query{recipient}, $query{size});
 		syslog("err", "Return value from parse_recipient: " . $rv );
-		#if($rv < 2) {
-		#	print $rv ? $RESPONSE_OK : $RESPONSE_REJECT; return;
-		#} else {
-		#	print $RESPONSE_DUNNO; return;
-		#}
 		print "action=" .$rv;
 		return;
 	}
