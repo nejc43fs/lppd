@@ -156,6 +156,7 @@ sub check_quota
 			die;
 		}
 		my $data = "recipient=" . $username . "\n" ."size=" .$mailsize ."\n\n";
+		syslog("err", "Sending to " .$mboxHost ." port: " .$dovecot_policy_port ." request: " .$data);
 		$socket->printflush($data);
 		while($line = $socket->getline)
 		{
@@ -163,9 +164,14 @@ sub check_quota
 			$action = $1 if($line =~ m/^action=(.*)/);
 			#	$socket->close;
 		}
+		syslog("err", "Got response: " .$action);
 		$socket->close;
 		alarm 0;
-	}; if($@) { return 2; syslog("err", "Error in eval for : " . $username ."\@" .$mboxHost ); }
+	}; 
+	if($@) { 
+		return 2; 
+		syslog("err", "Error in eval for : " . $username ."\@" .$mboxHost ); 
+	}
 	return 1 if($action eq "ok");
 	return 2 if($action eq "dunno");
 	return 0;
