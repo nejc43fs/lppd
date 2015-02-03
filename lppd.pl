@@ -12,6 +12,7 @@ use Sys::Syslog qw(:standard);
 use IO::Socket::INET;
 use Config::General;
 use Net::LDAP;
+use Net::LDAP::Filter;
 
 #################  :: variables ::  #################
 
@@ -99,7 +100,7 @@ sub parse_recipient
 
 		my $result = $ldap->search(
 		    base   => $ldap_base,
-		    filter => $filter,
+		    filter => Net::LDAP::Filter->new( $filter ),
 		    attrs => ['uid', 'mailHost']
 		);
 		syslog("err", "LDAP: searching base: " .$ldap_base ." filter: " .$filter );
