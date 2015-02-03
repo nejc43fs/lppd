@@ -84,7 +84,7 @@ sub parse_recipient
 	syslog("err", "LDAP: bind success" ) if $debug;
 
 	my $filter = $ldap_filter;
-	$filter =~ s/\r//gc;
+	$filter =~ s/\r//g;
 	$filter =~ s/%s/$recipient/g;
 
 	my $result = $ldap->search(
