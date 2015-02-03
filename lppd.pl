@@ -115,7 +115,9 @@ sub parse_recipient
 				$mailboxHost = $result->get_value("mailHost") || "";
 				$username = $result->get_value("uid") || "";
 				syslog("err", "Response received: mailhost: " .$mailboxHost ." username: " .$username );
+				syslog("err", "Calling check_quota");
 				$rv = check_quota($username, $mailboxHost, $size) || "2";
+				syslog("err", "Return from check_quota: " . $rv);
 				log_request($recipient,$rv,0);
 			} else {
 				syslog("err", "Too many responses");
@@ -124,9 +126,11 @@ sub parse_recipient
 		} else {
 			syslog("err", "LDAP query failed: " . $result->error );
 		}
+		syslog("err", "Unbinding LDAP");
 		$ldap->unbind;
 		alarm 0;
 	};
+	syslog("err", "returning from parse_recipient: " .$rv);
 	return $rv;
 }
 
@@ -227,6 +231,7 @@ sub process_request {
 	if(keys(%query) > 0 && defined $query{recipient} && defined $query{size}) {
 		syslog("err", "Request: recipient=" . $query{recipient} ." size=" .$query{size});
 		my $rv = parse_recipient($query{recipient}, $query{size});
+		syslog("err", "Return value from parse_recipient: " . $rv );
 		if($rv < 2) {
 			print $rv ? $RESPONSE_OK : $RESPONSE_REJECT; return;
 		} else {
