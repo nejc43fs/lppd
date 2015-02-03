@@ -112,8 +112,9 @@ sub parse_recipient
 			log_request($recipient,$rv,0);
 			syslog("err", "Request for $recipient [unknown mail alias]"); 
 		} elsif($result->count == 1) {
-			$mailboxHost = $result->get_value("mailHost") || "";
-			$username = $result->get_value("uid") || "";
+			$entry = ${$result->entries}[0];
+			$mailboxHost = $entry->get_value("mailHost") || "";
+			$username = $entry->get_value("uid") || "";
 			syslog("err", "Response received: mailhost: " .$mailboxHost ." username: " .$username );
 			syslog("err", "Calling check_quota");
 			$rv = check_quota($username, $mailboxHost, $size) || "2";
