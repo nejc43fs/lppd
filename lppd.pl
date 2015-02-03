@@ -102,7 +102,7 @@ sub parse_recipient
 		    filter => $filter,
 		    attrs => ['uid', 'mailHost']
 		);
-		syslog("err", "LDAP: searching" );
+		syslog("err", "LDAP: searching base: " .$ldap_base ." filter: " .$filter );
  
 		if (!$result->code) {
 			if($result->count == 0) {
@@ -115,6 +115,9 @@ sub parse_recipient
 				$username = $result->get_value("uid") || "";
 				$rv = check_quota($username, $mailboxHost, $size) || "2";
 				log_request($recipient,$rv,0);
+			} else {
+				syslog("err", "Too many responses");
+				$rv = 2;
 			}
 		} else {
 			syslog("err", "LDAP query failed: " . $result->error );
