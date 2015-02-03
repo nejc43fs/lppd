@@ -246,7 +246,8 @@ sub process_request {
 		#} else {
 		#	print $RESPONSE_DUNNO; return;
 		#}
-		print $rv;
+		print "action=" .$rv;
+		return;
 	}
 	print $RESPONSE_DUNNO;
 	return;
