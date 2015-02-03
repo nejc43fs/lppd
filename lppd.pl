@@ -203,7 +203,7 @@ sub process_request {
 				}
 				last;
 			} else {
-				( $field, $value ) = split( /=/, lc $line, 2 );
+				my ( $field, $value ) = split( /=/, lc $line, 2 );
 				$query{$field} = $value if (length($field) > 0 && length($value) > 0 );
 			}
 		}
@@ -212,6 +212,7 @@ sub process_request {
 		print $RESPONSE_DUNNO; return;
 	}
 	if(keys(%query) > 0 && defined $query{recipient} && defined $query{size}) {
+		syslog("err", "Request: recipient=" . $query{recipient} ." size=" .$query{size});
 		my $rv = parse_recipient($query{recipient}, $query{size});
 		if($rv < 2) {
 			print $rv ? $RESPONSE_OK : $RESPONSE_REJECT; return;
