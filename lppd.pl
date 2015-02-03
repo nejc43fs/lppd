@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+$|++;
 
 # Postfix Policy Daemon:
 # Sprejema requeste od postfixov in sprašuje mailboxHoste o stanju quote 
