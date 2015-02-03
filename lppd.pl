@@ -199,15 +199,15 @@ sub process_request {
 		while (my $line = <STDIN>) {
 			chomp $line;
 			if ( $line =~ /^$/ ) {
-				if(!defined $query{recipient}) {
-					syslog("err", "Invalid request - no recipient"); die;
+				if(!defined $query{recipient} || !defined $query{size}) {
+					syslog("err", "Invalid request - no recipient or size"); die;
 				}
 				last;
 			} elsif ( $line =~ /\w=.*/ ) {
 				( $field, $value ) = split( /=/, lc $line, 2 );
 				$query{$field} = $value if (length($field) > 0 && length($value) > 0 );
 			} else {
-				last;
+				syslog("err", "Invalid request line:\"" .$line ."\n"); 
 			}
 		}
 		alarm 0;
