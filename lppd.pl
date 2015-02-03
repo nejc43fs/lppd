@@ -79,7 +79,7 @@ sub log_request
 }
 
 # parse_recipient(alias): checks whether the user corresponding to $alias is over quota (uses timestamp cache)
-# input: alias
+# input: alias, size
 # output: 0-reject, 1-ok, 2-dunno
 sub parse_recipient
 {
@@ -89,8 +89,10 @@ sub parse_recipient
 	$rv = 2;
 
 	eval {
+		syslog("err", "Starting LDAP:" );
 		my $ldap = Net::LDAP->new( $ldap_server, timeout => 15 ) or return 2;
 		$ldap->bind($ldap_dn, password => $ldap_pass);
+		syslog("err", "LDAP: bind success" );
  
 		my $filter = $ldap_filter;
 		$filter =~ s/%s/$recipient/g;
@@ -100,12 +102,13 @@ sub parse_recipient
 		    filter => $filter,
 		    attrs => ['uid', 'mailHost']
 		);
+		syslog("err", "LDAP: searching" );
  
 		if (!$result->code) {
 			if($result->count == 0) {
 				$rv=2;
 				log_request($recipient,$rv,0);
-				#syslog("err", "Request for $recipient [unknown mail alias]"); $rv = 2;	
+				syslog("err", "Request for $recipient [unknown mail alias]"); 
 			}
 			elsif($result->count == 1) {
 				$mailboxHost = $result->get_value("mailHost") || "";
@@ -207,11 +210,12 @@ sub process_request {
 				( $field, $value ) = split( /=/, lc $line, 2 );
 				$query{$field} = $value if (length($field) > 0 && length($value) > 0 );
 			} else {
-				syslog("err", "Invalid request line:\"" .$line ."\n"); 
+				syslog("err", "Invalid request line:\"" .$line ."\"\n"); 
 			}
 		}
 		alarm 0;
-	}; if($@) {
+	}; 
+	if($@) {
 		print $RESPONSE_DUNNO; return;
 	}
 	if(keys(%query) > 0 && defined $query{recipient} && defined $query{size}) {
