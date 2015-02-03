@@ -23,6 +23,7 @@ my $dovecot_policy_timeout = 5;
 my $tcp_timeout = 10;
 my $ldap_server = "localhost";
 my $ldap_base = "ou=domains,o=top";
+my $ldap_pass = "password";
 my $pid_file = "/tmp/ppd.pid";
 my (%query, $quota_request, $rt, $line, $field, $value, $return_value, %config, $mailboxHost);
 my $ldap_filter= '(|(uid=%s)(mailAlternateAddress=%s)(mail=%s))';
@@ -86,8 +87,8 @@ sub parse_recipient
 	$rv = 2;
 
 	eval {
-		my $ldap = Net::LDAP->new( $ldap_server ) or die $@;
-		$ldap->bind;
+		my $ldap = Net::LDAP->new( $ldap_server, timeout => 15 ) or return 2;
+		$ldap->bind($ldap_base, password => $ldap_pass);
  
 		my $filter = $ldap_filter;
 		$filter =~ s/%s/$recipient/g;
@@ -167,6 +168,7 @@ sub parse_config
 	$pid_file = $config{pid_file} if $config{pid_file};
 	$ldap_server = $config{ldap_server} if $config{ldap_server};
 	$ldap_base = $config{ldap_base} if $config{ldap_base};
+	$ldap_pass = $config{ldap_pass} if $config{ldap_pass};
 	$ldap_filter = $config{ldap_filter} if $config{ldap_filter};
 	
 	unless($bind_port =~ /^[1-9]+?\d*?$/ && $bind_port > 0 && $bind_port < 65536) {
