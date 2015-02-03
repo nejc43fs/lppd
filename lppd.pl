@@ -112,14 +112,16 @@ sub parse_recipient
 			log_request($recipient,$rv,0);
 			syslog("err", "Request for $recipient [unknown mail alias]"); 
 		} elsif($result->count == 1) {
-			$entry = ${$result->entries}[0];
-			$mailboxHost = $entry->get_value("mailHost") || "";
-			$username = $entry->get_value("uid") || "";
-			syslog("err", "Response received: mailhost: " .$mailboxHost ." username: " .$username );
-			syslog("err", "Calling check_quota");
-			$rv = check_quota($username, $mailboxHost, $size) || "2";
-			syslog("err", "Return from check_quota: " . $rv);
-			log_request($recipient,$rv,0);
+			foreach my $entry ($result->entries) {
+				$entry = $$result->entries[0];
+				$mailboxHost = $entry->get_value("mailHost") || "";
+				$username = $entry->get_value("uid") || "";
+				syslog("err", "Response received: mailhost: " .$mailboxHost ." username: " .$username );
+				syslog("err", "Calling check_quota");
+				$rv = check_quota($username, $mailboxHost, $size) || "2";
+				syslog("err", "Return from check_quota: " . $rv);
+				log_request($recipient,$rv,0);
+			}
 		} else {
 			syslog("err", "Too many responses");
 			$rv = 2;
