@@ -26,7 +26,7 @@ my $ldap_base = "ou=domains,o=top";
 my $ldap_pass = "password";
 my $pid_file = "/tmp/ppd.pid";
 my (%query, $quota_request, $rt, $line, $field, $value, $return_value, %config, $mailboxHost);
-my $ldap_filter= '(|(uid=%s)(mailAlternateAddress=%s)(mail=%s))';
+my $ldap_filter= '(|(uid=%s)(mailAlternateAddress=%s)(mail=%s))'; # %s expands to recipient
 my $RESPONSE_DUNNO = "action=dunno\n\n";
 my $RESPONSE_OK = "action=dunno\n\n";
 #my $RESPONSE_REJECT = "action=reject\n\n";
@@ -109,7 +109,7 @@ sub parse_recipient
 				$mailboxHost = $result->get_value("mailHost") || "";
 				$username = $result->get_value("uid") || "";
 				$rv = check_quota($username, $mailboxHost, $size) || "2";
-				return $rv;
+				log_request($recipient,$rv,0);
 			}
 		} else {
 			syslog("err", "LDAP query failed: " . $result->error );
@@ -211,7 +211,6 @@ sub process_request {
 	}
 	if(keys(%query) > 0 && defined $query{recipient} && defined $query{size}) {
 		my $rv = parse_recipient($query{recipient}, $query{size});
-		#log_request($rv,$rv,0);
 		if($rv < 2) {
 			print $rv ? $RESPONSE_OK : $RESPONSE_REJECT; return;
 		} else {
