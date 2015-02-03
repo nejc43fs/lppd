@@ -34,6 +34,7 @@ my $RESPONSE_OK = "action=dunno\n\n";
 #my $RESPONSE_REJECT = "action=dunno\n\n";
 my $RESPONSE_REJECT = "action=defer_if_permit User over quota\n\n";
 my $logfile = "/tmp/lppd.log";
+my $daemonize = 0; # 0 - if foreground, 1 - background
 
 #################  :: main ::  ###################
 
@@ -51,7 +52,7 @@ PPD->run(
 	port => $bind_port,
 	log_level => 0,
 	log_file => $logfile,
-	background => 1,
+	background => $daemonize,
 	#pid_file => $pid_file,
 	user => $run_as
 );
