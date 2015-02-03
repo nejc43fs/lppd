@@ -224,7 +224,7 @@ sub process_request {
 		syslog("err", "Request: recipient=" . $query{recipient} ." size=" .$query{size});
 		my $rv = parse_recipient($query{recipient}, $query{size});
 		syslog("err", "Return value from parse_recipient: " . $rv );
-		print "action=" .$rv;
+		print "action=" .$rv ."\n\n";
 		return;
 	}
 	print $RESPONSE_DUNNO;
