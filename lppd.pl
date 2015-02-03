@@ -216,6 +216,7 @@ sub process_request {
 		alarm 0;
 	}; 
 	if($@) {
+		syslog("err", "Error processing");
 		print $RESPONSE_DUNNO; return;
 	}
 	if(keys(%query) > 0 && defined $query{recipient} && defined $query{size}) {
