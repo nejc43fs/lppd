@@ -141,7 +141,6 @@ sub parse_recipient
 # output: 0-reject, 1-ok, 2-dunno
 sub check_quota
 {
-	my $action;
 	my $username = shift;
 	my $mboxHost = shift;
 	my $mailsize = shift;
